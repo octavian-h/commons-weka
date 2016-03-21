@@ -43,7 +43,7 @@ class Test{
                                                     .folds(10)
                                                     .iterations(2)
                                                     .build();
-            task.call(); //the method block the current thread until it finish
+            task.call(); //the method blocks the current thread until it finishes
         }
     }
 }

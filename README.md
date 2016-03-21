@@ -1,5 +1,8 @@
 # Commons Weka (BETA) #
 
+[![Build Status](https://img.shields.io/travis/octavian-h/commons-weka/master.svg)](https://travis-ci.org/octavian-h/commons-weka)
+[![Coverage Status](https://img.shields.io/coveralls/octavian-h/commons-weka/master.svg)](https://coveralls.io/github/octavian-h/commons-weka?branch=master)
+
 ## Overview ##
 The goal of this utility is to provide optimised functions to run validation tasks using Weka library.
 

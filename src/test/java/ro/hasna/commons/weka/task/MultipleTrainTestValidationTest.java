@@ -113,7 +113,7 @@ public class MultipleTrainTestValidationTest {
             Assert.assertEquals(expectedHeader[i], header[i]);
         }
         for (int i = 1; i < 19; i++) {
-            String[] line = values.get(1);
+            String[] line = values.get(i);
             Assert.assertTrue(line[0].contains("IBk"));
             Assert.assertEquals("iris_TRAIN", line[1]);
             Assert.assertEquals("iris_TEST", line[2]);

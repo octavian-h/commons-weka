@@ -23,6 +23,7 @@ import weka.core.Instances;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 
 /**
  * @since 0.1
@@ -65,5 +66,19 @@ public class WekaUtilsTest {
         }
 
         Assert.assertEquals(trainSize, testSize * 4);
+    }
+
+    @Test
+    public void testBalanceInstances() throws Exception {
+        Instances instances = WekaUtils.readInstances(Paths.get(getClass().getResource("/iris.arff").toURI()));
+        instances.remove(0);
+        instances.remove(1);
+        instances.remove(2);
+        Instances balancedInstances = WekaUtils.getBalancedInstances(instances);
+
+        Map<Double, Integer> classesDistribution = WekaUtils.getClassesDistribution(balancedInstances);
+        Assert.assertEquals(47, classesDistribution.get(0d).intValue());
+        Assert.assertEquals(47, classesDistribution.get(1d).intValue());
+        Assert.assertEquals(47, classesDistribution.get(2d).intValue());
     }
 }

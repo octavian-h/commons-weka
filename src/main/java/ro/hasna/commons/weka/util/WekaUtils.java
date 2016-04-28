@@ -44,8 +44,7 @@ public class WekaUtils {
      *
      * @param inputPath the path to the ARFF file
      * @return the instances
-     *
-     * @throws IOException if the file couldn't not be read
+     * @throws IOException if the file couldn't be read
      */
     public static Instances readInstances(Path inputPath) throws IOException {
         BufferedReader reader = Files.newBufferedReader(inputPath, StandardCharsets.UTF_8);
@@ -86,7 +85,7 @@ public class WekaUtils {
         result[0] = new Instances(instances, trainSize);
         result[1] = new Instances(instances, initialSize - trainSize);
 
-        Map<Double, Integer> f = getClassValuesDistribution(instances);
+        Map<Double, Integer> f = getClassesDistribution(instances);
         for (Map.Entry<Double, Integer> entry : f.entrySet()) {
             Integer value = entry.getValue();
             int newValue = (int) (value * trainInstancesPercentage);
@@ -117,7 +116,7 @@ public class WekaUtils {
      * @param instances the data set
      * @return a map with pairs of (class id, apparition count)
      */
-    public static Map<Double, Integer> getClassValuesDistribution(Instances instances) {
+    public static Map<Double, Integer> getClassesDistribution(Instances instances) {
         Map<Double, Integer> f = new HashMap<>();
         for (Instance instance : instances) {
             double key = instance.classValue();
@@ -128,5 +127,36 @@ public class WekaUtils {
             f.put(key, nr + 1);
         }
         return f;
+    }
+
+    /**
+     * Resample the instances so as to have the same number of instances per class.
+     *
+     * @param instances the data set
+     * @return a balanced data set
+     */
+    public static Instances getBalancedInstances(Instances instances) {
+        Map<Double, Integer> f = getClassesDistribution(instances);
+        int instancesPerClass = instances.size();
+        for (Integer count : f.values()) {
+            if (instancesPerClass > count) {
+                instancesPerClass = count;
+            }
+        }
+
+        Instances result = new Instances(instances, instances.size());
+        f = new HashMap<>();
+        for (Instance instance : instances) {
+            double key = instance.classValue();
+            Integer nr = f.get(key);
+            if (nr == null) {
+                nr = 0;
+            }
+            if (nr < instancesPerClass) {
+                result.add(instance);
+                f.put(key, nr + 1);
+            }
+        }
+        return result;
     }
 }

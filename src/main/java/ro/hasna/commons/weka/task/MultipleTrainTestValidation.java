@@ -112,8 +112,8 @@ public class MultipleTrainTestValidation implements Callable<Boolean> {
 
                     for (final double trainSizePercentage : trainSizePercentages) {
                         futures.add(executorService.submit(() -> {
-                            logger.config(String.format("Evaluating train=%s (%.2f), test=%s, fold=%d, iteration=%d",
-                                    trainName, trainSizePercentage, testName, foldNumber, iterationNumber));
+                            logger.config(String.format("Evaluating train=%s (%.2f), test=%s, fold=%d, iteration=%d, %s",
+                                    trainName, trainSizePercentage, testName, foldNumber, iterationNumber, extraColumns));
 
                             //copy the classifier so as to be used in parallel
                             Classifier classifierCopy = AbstractClassifier.makeCopy(classifier);

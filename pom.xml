@@ -21,7 +21,7 @@
 
     <groupId>ro.hasna.commons</groupId>
     <artifactId>commons-weka</artifactId>
-    <version>0.2-SNAPSHOT</version>
+    <version>0.2</version>
     <packaging>jar</packaging>
 
     <name>Commons Weka</name>
@@ -58,7 +58,7 @@
         <connection>scm:git:https://github.com/octavian-h/commons-weka.git</connection>
         <developerConnection>scm:git:https://github.com/octavian-h/commons-weka.git</developerConnection>
         <url>https://github.com/octavian-h/commons-weka</url>
-        <tag>HEAD</tag>
+        <tag>commons-weka-0.2</tag>
     </scm>
 
     <distributionManagement>

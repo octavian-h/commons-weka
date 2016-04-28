@@ -16,7 +16,7 @@ Add the following dependency to your maven project.
 <dependency>
     <groupId>ro.hasna.commons.weka</groupId>
     <artifactId>commons-weka</artifactId>
-    <version>0.1</version>
+    <version>0.2</version>
 </dependency>
 ```
 

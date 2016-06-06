@@ -24,7 +24,7 @@ import java.util.concurrent.Callable;
 
 /**
  * Task for running a simple validation.
- *
+ * <p>
  * <pre>{@code
  *      Classifier classifier = ...
  *      Instances train = WekaUtils.readInstances("path/to/train.arff");
@@ -32,7 +32,7 @@ import java.util.concurrent.Callable;
  *      ValidationResult result = new TrainTestValidation(classifier, train, test).call();
  *
  *      try(ValidationResultWriter writer = new CsvWriter("path/to/result.csv").build()){
- *          writer.write(classifier, train, test, result);
+ *          writer.write(result);
  *      }
  * }</pre>
  *
@@ -61,6 +61,6 @@ public class TrainTestValidation implements Callable<ValidationResult> {
         evaluation.evaluateModel(classifier, testInstances);
         long predictingTime = (System.nanoTime() - startTime) / testInstances.size();
 
-        return new ValidationResult(modelBuildingTime, evaluation, predictingTime);
+        return new ValidationResult(modelBuildingTime, predictingTime, evaluation.confusionMatrix());
     }
 }

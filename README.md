@@ -16,7 +16,7 @@ Add the following dependency to your maven project.
 <dependency>
     <groupId>ro.hasna.commons.weka</groupId>
     <artifactId>commons-weka</artifactId>
-    <version>0.2</version>
+    <version>0.3</version>
 </dependency>
 ```
 
@@ -40,14 +40,21 @@ class Test{
         Classifier classifier = new IBk(1); //1NN classifier
         Instances train = WekaUtils.readInstances("path/to/train.arff");
         Instances test = WekaUtils.readInstances("path/to/test.arff");
-        try(ValidationResultWriter writer = new CsvWriter("path/to/result.csv").build()){
-            MultipleTrainTestValidation task = new MultipleTrainTestValidation.Builder(classifier, train, test, writer)
-                                                    .trainSizePercentages(Arrays.asList(0.6, 0.7, 0.8))
-                                                    .folds(10)
-                                                    .iterations(2)
-                                                    .build();
-            task.call(); //the method blocks the current thread until it finishes
-        }
+
+        MultipleTrainTestValidation task = new MultipleTrainTestValidation.Builder(classifier, train, test)
+                                          .trainSizePercentages(Arrays.asList(0.6, 0.7, 0.8))
+                                          .iterations(10)
+                                          .build();
+        List<EvaluationResult> results = task.call();
+
+        ValidationResultWriter writer = new CsvWriter("path/to/result.csv")
+                                          .evaluationResultMask(CsvWriter.CONFUSION_MATRIX)
+                                          .numClasses(train.numClasses())
+                                          .resultMetadataKeys(MultipleTrainTestValidation.RESULT_METADATA_KEYS)
+                                          .writeHeader(true)
+                                          .build();
+        writer.write(results);
+        writer.close();
     }
 }
 ```

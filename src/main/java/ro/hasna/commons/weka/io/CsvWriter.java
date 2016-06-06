@@ -16,31 +16,36 @@
 package ro.hasna.commons.weka.io;
 
 import ro.hasna.commons.weka.type.ValidationResult;
-import weka.classifiers.Classifier;
-import weka.core.Instances;
-import weka.core.OptionHandler;
-import weka.core.Utils;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.text.NumberFormat;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
- * A synchronised CSV writer for the confusion matrices that resulted from the validation.
+ * A CSV writer for the results of the model validation.
  *
- * @since 0.1
+ * @since 0.3
  */
 public class CsvWriter implements ValidationResultWriter {
+    public static final int TRAINING_TIME = 0b0001;
+    public static final int TESTING_TIME = 0b0010;
+    public static final int CONFUSION_MATRIX = 0b0100;
+    public static final int CLASSIFICATION_ERROR = 0b1000;
     private final Writer writer;
     private final char columnDelimiter;
     private final String rowDelimiter;
     private final NumberFormat numberFormat;
+    private List<String> sharedMetadataKeys;
+    private List<String> resultMetadataKeys;
+    private int evaluationResultMask;
 
 
     private CsvWriter(Builder builder) {
@@ -48,62 +53,83 @@ public class CsvWriter implements ValidationResultWriter {
         columnDelimiter = builder.columnDelimiter;
         rowDelimiter = builder.rowDelimiter;
         numberFormat = builder.numberFormat;
+        sharedMetadataKeys = builder.sharedMetadataKeys;
+        resultMetadataKeys = builder.resultMetadataKeys;
+        evaluationResultMask = builder.evaluationResultMask;
     }
 
     @Override
-    public void write(Classifier classifier, Instances trainInstances, Instances testInstances,
-                      double trainSizePercentage, int foldNumber, int iterationNumber, List<String> extraColumns,
-                      ValidationResult result) throws IOException {
-
-        String classifierName = classifier.getClass().getSimpleName();
-        if (classifier instanceof OptionHandler) {
-            classifierName += " " + Utils.joinOptions(((OptionHandler) classifier).getOptions());
+    public void write(List<ValidationResult> results, Map<String, Object> sharedMetadata) throws IOException {
+        StringBuilder prefix = new StringBuilder();
+        for (String key : sharedMetadataKeys) {
+            Object obj = sharedMetadata.get(key);
+            if (obj instanceof Number) {
+                prefix.append(numberFormat.format(obj));
+            } else {
+                prefix.append(obj);
+            }
+            prefix.append(columnDelimiter);
         }
 
-        StringBuilder sb = new StringBuilder();
-        sb.append(classifierName);
-        sb.append(columnDelimiter);
-        sb.append(trainInstances.relationName());
-        sb.append(columnDelimiter);
-        sb.append(testInstances.relationName());
-        sb.append(columnDelimiter);
-        sb.append(numberFormat.format(trainSizePercentage));
-        sb.append(columnDelimiter);
-        sb.append(foldNumber);
-        sb.append(columnDelimiter);
-        sb.append(iterationNumber);
-        sb.append(columnDelimiter);
+        for (ValidationResult item : results) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(prefix);
 
-        for (String extraColumn : extraColumns) {
-            sb.append(extraColumn);
-            sb.append(columnDelimiter);
-        }
-
-        sb.append(result.getModelBuildingTime());
-        sb.append(columnDelimiter);
-        sb.append(result.getPredictingTime());
-        sb.append(columnDelimiter);
-
-        double[][] confusionMatrix = result.getPredictingResult().confusionMatrix();
-        for (double[] row : confusionMatrix) {
-            for (double value : row) {
-                sb.append(numberFormat.format(value));
+            for (String key : resultMetadataKeys) {
+                Object obj = item.getMetadataValue(key);
+                if (obj instanceof Number) {
+                    sb.append(numberFormat.format(obj));
+                } else {
+                    sb.append(obj);
+                }
                 sb.append(columnDelimiter);
             }
-        }
-        sb.append(rowDelimiter);
-        String row = sb.toString();
 
-        synchronized (writer) {
-            writer.write(row);
+            if ((evaluationResultMask & TRAINING_TIME) != 0) {
+                sb.append(item.getTrainingTime());
+                sb.append(columnDelimiter);
+            }
+
+            if ((evaluationResultMask & TESTING_TIME) != 0) {
+                sb.append(item.getTestingTime());
+                sb.append(columnDelimiter);
+            }
+
+            double[][] confusionMatrix = item.getConfusionMatrix();
+            if ((evaluationResultMask & CLASSIFICATION_ERROR) != 0) {
+                double globalSum = 0;
+                double firstDiagonalSum = 0;
+                for (int i = 0; i < confusionMatrix.length; i++) {
+                    for (int j = 0; j < confusionMatrix[i].length; j++) {
+                        globalSum += confusionMatrix[i][j];
+                        if (i == j) {
+                            firstDiagonalSum += confusionMatrix[i][j];
+                        }
+                    }
+                }
+                sb.append(numberFormat.format(1 - firstDiagonalSum / globalSum));
+                sb.append(columnDelimiter);
+            }
+
+            if ((evaluationResultMask & CONFUSION_MATRIX) != 0) {
+                for (double[] row : confusionMatrix) {
+                    for (double value : row) {
+                        sb.append(numberFormat.format(value));
+                        sb.append(columnDelimiter);
+                    }
+                }
+            }
+
+            sb.deleteCharAt(sb.length() - 1);
+            sb.append(rowDelimiter);
+
+            writer.write(sb.toString());
         }
     }
 
     @Override
     public void flush() throws IOException {
-        synchronized (writer) {
-            writer.flush();
-        }
+        writer.flush();
     }
 
     @Override
@@ -117,9 +143,12 @@ public class CsvWriter implements ValidationResultWriter {
         private char columnDelimiter;
         private String rowDelimiter;
         private NumberFormat numberFormat;
-        private List<String> extraColumnsNames;
+        private int evaluationResultMask;
+        private List<String> sharedMetadataKeys;
+        private List<String> resultMetadataKeys;
         private int numClasses;
         private boolean writeHeaders;
+        private boolean appendToFile;
 
         public Builder(Path outputPath) {
             this.outputPath = outputPath;
@@ -127,9 +156,13 @@ public class CsvWriter implements ValidationResultWriter {
             // default values
             columnDelimiter = ',';
             rowDelimiter = "\n";
-            extraColumnsNames = Collections.emptyList();
+            sharedMetadataKeys = Collections.emptyList();
+            resultMetadataKeys = Collections.emptyList();
+            evaluationResultMask = TRAINING_TIME | TESTING_TIME | CLASSIFICATION_ERROR;
             writeHeaders = false;
             numberFormat = NumberFormat.getNumberInstance(Locale.ENGLISH);
+            appendToFile = false;
+            numClasses = 0;
         }
 
         public Builder columnDelimiter(char columnDelimiter) {
@@ -147,59 +180,90 @@ public class CsvWriter implements ValidationResultWriter {
             return this;
         }
 
-        public Builder extraColumnsNames(List<String> extraColumnsNames) {
-            this.extraColumnsNames = extraColumnsNames;
+        public Builder sharedMetadataKeys(List<String> sharedMetadataKeys) {
+            this.sharedMetadataKeys = sharedMetadataKeys;
+            return this;
+        }
+
+        public Builder resultMetadataKeys(List<String> resultMetadataKeys) {
+            this.resultMetadataKeys = resultMetadataKeys;
+            return this;
+        }
+
+        public Builder evaluationResultMask(int mask) {
+            this.evaluationResultMask = mask;
             return this;
         }
 
         public Builder numClasses(int numClasses) {
+            if (numClasses <= 0) {
+                throw new IllegalArgumentException("numClasses must be strictly positive");
+            }
             this.numClasses = numClasses;
             return this;
         }
 
-        public Builder writeHeaders(boolean writeHeaders) {
+        public Builder writeHeader(boolean writeHeaders) {
             this.writeHeaders = writeHeaders;
             return this;
         }
 
+        public Builder appendToFile(boolean appendToFile) {
+            this.appendToFile = appendToFile;
+            return this;
+        }
+
         public CsvWriter build() throws IOException {
-            writer = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8);
+            if (!appendToFile) {
+                writer = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8);
+            } else {
+                writer = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8, StandardOpenOption.APPEND);
+            }
 
             if (writeHeaders) {
                 StringBuilder sb = new StringBuilder();
-                sb.append("classifier");
-                sb.append(columnDelimiter);
-                sb.append("train");
-                sb.append(columnDelimiter);
-                sb.append("test");
-                sb.append(columnDelimiter);
-                sb.append("train_size_percentage");
-                sb.append(columnDelimiter);
-                sb.append("fold");
-                sb.append(columnDelimiter);
-                sb.append("iteration");
-                sb.append(columnDelimiter);
-
-                for (String extraColumnsName : extraColumnsNames) {
-                    sb.append(extraColumnsName);
+                for (String key : sharedMetadataKeys) {
+                    sb.append(key);
+                    sb.append(columnDelimiter);
+                }
+                for (String key : resultMetadataKeys) {
+                    sb.append(key);
                     sb.append(columnDelimiter);
                 }
 
-                sb.append("model_building_time");
-                sb.append(columnDelimiter);
-                sb.append("predicting_time");
-                sb.append(columnDelimiter);
+                if ((evaluationResultMask & TRAINING_TIME) != 0) {
+                    sb.append("training_time");
+                    sb.append(columnDelimiter);
+                }
 
-                for (int i = 1; i <= numClasses; i++) {
-                    for (int j = 1; j <= numClasses; j++) {
-                        sb.append(i);
-                        sb.append('_');
-                        sb.append(j);
-                        sb.append(columnDelimiter);
+                if ((evaluationResultMask & TESTING_TIME) != 0) {
+                    sb.append("testing_time");
+                    sb.append(columnDelimiter);
+                }
+
+                if ((evaluationResultMask & CLASSIFICATION_ERROR) != 0) {
+                    sb.append("classification_error");
+                    sb.append(columnDelimiter);
+                }
+
+                if ((evaluationResultMask & CONFUSION_MATRIX) != 0) {
+                    if (numClasses == 0) {
+                        throw new IllegalArgumentException("numClasses must be provided if CONFUSION_MATRIX flag is selected");
+                    }
+
+                    for (int i = 1; i <= numClasses; i++) {
+                        for (int j = 1; j <= numClasses; j++) {
+                            sb.append(i);
+                            sb.append('_');
+                            sb.append(j);
+                            sb.append(columnDelimiter);
+                        }
                     }
                 }
 
+                sb.deleteCharAt(sb.length() - 1);
                 sb.append(rowDelimiter);
+
                 writer.write(sb.toString());
             }
 

@@ -15,7 +15,6 @@
  */
 package ro.hasna.commons.weka.task;
 
-import ro.hasna.commons.weka.io.ValidationResultWriter;
 import ro.hasna.commons.weka.type.ValidationResult;
 import ro.hasna.commons.weka.util.WekaUtils;
 import weka.classifiers.AbstractClassifier;
@@ -34,35 +33,35 @@ import java.util.logging.Logger;
 
 /**
  * Task for running the validation on multiple train set sizes.
- *
+ * <p>
  * <pre>{@code
  *      Classifier classifier = ...
  *      Instances train = WekaUtils.readInstances("path/to/train.arff");
  *      Instances test = WekaUtils.readInstances("path/to/test.arff");
  *
- *      try(ValidationResultWriter writer = new CsvWriter("path/to/result.csv").build()){
- *          MultipleTrainTestValidation task = new MultipleTrainTestValidation.Builder(classifier, train, test, writer)
- *                                              .trainSizePercentages(Arrays.asList(0.6, 0.7, 0.8))
- *                                              .folds(5)
- *                                              .iterations(10)
- *                                              .build();
- *          task.call(); //the method block the current thread until it finish
- *      }
+ *      MultipleTrainTestValidation task = new MultipleTrainTestValidation.Builder(classifier, train, test)
+ *                                        .trainSizePercentages(Arrays.asList(0.6, 0.7, 0.8))
+ *                                        .iterations(10)
+ *                                        .build();
+ *      List<ValidationResult> results = task.call(); //the method blocks the current thread until it finishes the computation
+ *
+ *      ValidationResultWriter writer = new CsvWriter("path/to/result.csv").build();
+ *      writer.write(results);
+ *      writer.close();
  * }</pre>
  *
- * @since 0.1
+ * @since 0.3
  */
-public class MultipleTrainTestValidation implements Callable<Boolean> {
-    private final static Logger logger = Logger.getLogger(MultipleTrainTestValidation.class.getName());
+public class MultipleTrainTestValidation implements Callable<List<ValidationResult>> {
+    public static final String TRAIN_SIZE_PERCENTAGE_KEY = "train_size_percentage";
+    public static final List<String> RESULT_METADATA_KEYS = Collections.singletonList(TRAIN_SIZE_PERCENTAGE_KEY);
+    private static final Logger logger = Logger.getLogger(MultipleTrainTestValidation.class.getName());
     private final Classifier classifier;
     private final Instances trainInstances;
     private final Instances testInstances;
-    private final ValidationResultWriter validationResultWriter;
-    private final List<String> extraColumns;
     private final ExecutorService executorService;
     private final boolean closeExecutorService;
     private final List<Double> trainSizePercentages;
-    private final int folds;
     private final int iterations;
 
     private MultipleTrainTestValidation(Builder builder) {
@@ -70,26 +69,17 @@ public class MultipleTrainTestValidation implements Callable<Boolean> {
         trainInstances = builder.trainInstances;
         trainSizePercentages = builder.trainSizePercentages;
         testInstances = builder.testInstances;
-        folds = builder.folds;
-        validationResultWriter = builder.validationResultWriter;
-        extraColumns = builder.extraColumns;
         executorService = builder.executorService;
         closeExecutorService = builder.closeExecutorService;
         iterations = builder.iterations;
     }
 
-    private static Instances getRandomizedAndStratifiedInstances(Instances instances, Random random, int folds) {
-        final Instances trainInstancesCopy = new Instances(instances);
-        trainInstancesCopy.randomize(random);
-        if (folds > 1) {
-            trainInstancesCopy.stratify(folds);
-        }
-        return trainInstancesCopy;
-    }
-
     @Override
-    public Boolean call() throws Exception {
-        List<Future<Boolean>> futures = new ArrayList<>();
+    public List<ValidationResult> call() throws Exception {
+        int n = iterations * trainSizePercentages.size();
+        List<ValidationResult> results = new ArrayList<>(n);
+        List<Future<ValidationResult>> futures = new ArrayList<>(n);
+
         boolean done = false;
         try {
             final String trainName = trainInstances.relationName();
@@ -99,50 +89,38 @@ public class MultipleTrainTestValidation implements Callable<Boolean> {
                 final int iterationNumber = i + 1;
 
                 // randomize train instances
-                Instances trainInstancesCopy = getRandomizedAndStratifiedInstances(trainInstances, new Random(i), folds);
+                Instances trainInstancesCopy = new Instances(trainInstances);
+                trainInstancesCopy.randomize(new Random(i));
 
-                // randomize test instances
-                Instances testInstancesCopy = getRandomizedAndStratifiedInstances(testInstances, new Random(i), folds);
+                for (final double trainSizePercentage : trainSizePercentages) {
+                    futures.add(executorService.submit(() -> {
+                        logger.info(String.format("Evaluating train=%s (%.2f), test=%s, iteration=%d",
+                                trainName, trainSizePercentage, testName, iterationNumber));
 
-                for (int j = 0; j < folds; j++) {
-                    final int foldNumber = j + 1;
+                        //copy the classifier so as to be used in parallel
+                        Classifier classifierCopy = AbstractClassifier.makeCopy(classifier);
 
-                    final Instances trainInstancesFold = folds > 1 ? trainInstancesCopy.trainCV(folds, j) : trainInstancesCopy;
-                    final Instances testInstancesFold = folds > 1 ? testInstancesCopy.testCV(folds, j) : testInstancesCopy;
+                        Instances train = WekaUtils.getTrainAndTestInstancesStratified(trainInstancesCopy, trainSizePercentage)[0];
 
-                    for (final double trainSizePercentage : trainSizePercentages) {
-                        futures.add(executorService.submit(() -> {
-                            logger.config(String.format("Evaluating train=%s (%.2f), test=%s, fold=%d, iteration=%d, %s",
-                                    trainName, trainSizePercentage, testName, foldNumber, iterationNumber, extraColumns));
-
-                            //copy the classifier so as to be used in parallel
-                            Classifier classifierCopy = AbstractClassifier.makeCopy(classifier);
-
-                            Instances train = WekaUtils.getTrainAndTestInstancesStratified(trainInstancesFold, trainSizePercentage)[0];
-                            ValidationResult result = new TrainTestValidation(classifierCopy, train, testInstancesFold).call();
-
-                            validationResultWriter.write(classifierCopy, train, testInstancesFold,
-                                    trainSizePercentage, foldNumber, iterationNumber, extraColumns,
-                                    result);
-
-                            return true;
-                        }));
-                    }
+                        ValidationResult validationResult = new TrainTestValidation(classifierCopy, train, testInstances).call();
+                        validationResult.putMetadata(TRAIN_SIZE_PERCENTAGE_KEY, trainSizePercentage);
+                        return validationResult;
+                    }));
                 }
             }
 
             // await till we get all results
-            for (Future future : futures) {
-                future.get();
+            for (Future<ValidationResult> future : futures) {
+                results.add(future.get());
             }
 
             // set the flag that we finished properly
             done = true;
 
-            return true;
+            return results;
         } finally {
             if (!done) {
-                for (Future<Boolean> future : futures) {
+                for (Future<ValidationResult> future : futures) {
                     future.cancel(true);
                 }
             }
@@ -157,34 +135,26 @@ public class MultipleTrainTestValidation implements Callable<Boolean> {
         private final Classifier classifier;
         private final Instances trainInstances;
         private final Instances testInstances;
-        private final ValidationResultWriter validationResultWriter;
-        private List<String> extraColumns;
         private ExecutorService executorService;
         private boolean closeExecutorService;
         private List<Double> trainSizePercentages;
-        private int folds;
         private int iterations;
 
         /**
          * Constructor for building the class MultipleTrainTestValidation.
          *
-         * @param classifier             the Weka classifier
-         * @param trainInstances         the set of train instances
-         * @param testInstances          the set of test instances
-         * @param validationResultWriter the writer for the validation results
+         * @param classifier     the Weka classifier
+         * @param trainInstances the set of train instances
+         * @param testInstances  the set of test instances
          */
-        public Builder(Classifier classifier, Instances trainInstances, Instances testInstances,
-                       ValidationResultWriter validationResultWriter) {
+        public Builder(Classifier classifier, Instances trainInstances, Instances testInstances) {
             this.classifier = classifier;
             this.trainInstances = trainInstances;
             this.testInstances = testInstances;
-            this.validationResultWriter = validationResultWriter;
 
             // default values
             this.trainSizePercentages = Collections.singletonList(1.0);
             this.iterations = 1;
-            this.folds = 1;
-            this.extraColumns = Collections.emptyList();
             this.closeExecutorService = true;
         }
 
@@ -200,15 +170,6 @@ public class MultipleTrainTestValidation implements Callable<Boolean> {
             }
 
             this.trainSizePercentages = percentages;
-            return this;
-        }
-
-        public Builder folds(int folds) {
-            if (folds <= 0) {
-                throw new IllegalArgumentException("folds must be positive");
-            }
-
-            this.folds = folds;
             return this;
         }
 
@@ -228,11 +189,6 @@ public class MultipleTrainTestValidation implements Callable<Boolean> {
 
         public Builder closeExecutorService(boolean closeExecutorService) {
             this.closeExecutorService = closeExecutorService;
-            return this;
-        }
-
-        public Builder extraColumns(List<String> extraColumns) {
-            this.extraColumns = extraColumns;
             return this;
         }
 

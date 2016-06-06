@@ -16,32 +16,55 @@
 package ro.hasna.commons.weka.io;
 
 import ro.hasna.commons.weka.type.ValidationResult;
-import weka.classifiers.Classifier;
-import weka.core.Instances;
 
 import java.io.Flushable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
- * @since 0.1
+ * @since 0.3
  */
 public interface ValidationResultWriter extends AutoCloseable, Flushable {
 
     /**
+     * Write a list of validation results.
+     *
+     * @param results        the list of validation results
+     * @param sharedMetadata metadata that is common for all the results
+     * @throws IOException if the validation results could not be written
+     */
+    void write(List<ValidationResult> results, Map<String, Object> sharedMetadata) throws IOException;
+
+    /**
+     * Write a list of validation results.
+     *
+     * @param results the list of validation results
+     * @throws IOException if the validation results could not be written
+     */
+    default void write(List<ValidationResult> results) throws IOException {
+        write(results, Collections.emptyMap());
+    }
+
+    /**
      * Write the validation result.
      *
-     * @param classifier          the classifier used for building the model
-     * @param trainInstances      the train instances
-     * @param testInstances       the test instances
-     * @param trainSizePercentage the percentage of train instances used
-     * @param foldNumber          the fold number
-     * @param iterationNumber     the iteration number
-     * @param extraColumns        extra columns (ex: test instances properties)
-     * @param result              the validation result
+     * @param result         the validation result
+     * @param sharedMetadata metadata that is common for all the results
      * @throws IOException if the validation result could not be written
      */
-    void write(Classifier classifier, Instances trainInstances, Instances testInstances,
-               double trainSizePercentage, int foldNumber, int iterationNumber, List<String> extraColumns,
-               ValidationResult result) throws IOException;
+    default void write(ValidationResult result, Map<String, Object> sharedMetadata) throws IOException {
+        write(Collections.singletonList(result), sharedMetadata);
+    }
+
+    /**
+     * Write the validation result.
+     *
+     * @param result the validation result
+     * @throws IOException if the validation result could not be written
+     */
+    default void write(ValidationResult result) throws IOException {
+        write(Collections.singletonList(result), Collections.emptyMap());
+    }
 }

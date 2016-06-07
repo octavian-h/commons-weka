@@ -47,10 +47,10 @@ class Test{
                                           .build();
         List<EvaluationResult> results = task.call();
 
-        ValidationResultWriter writer = new CsvWriter("path/to/result.csv")
-                                          .evaluationResultMask(CsvWriter.CONFUSION_MATRIX)
-                                          .numClasses(train.numClasses())
+        ValidationResultWriter writer = new CsvValidationResultWriter("path/to/result.csv")
                                           .resultMetadataKeys(MultipleTrainTestValidation.RESULT_METADATA_KEYS)
+                                          .writeConfusionMatrix(true)
+                                          .numClasses(train.numClasses())
                                           .writeHeader(true)
                                           .build();
         writer.write(results);

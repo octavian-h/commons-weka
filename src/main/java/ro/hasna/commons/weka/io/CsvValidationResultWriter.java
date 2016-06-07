@@ -34,28 +34,24 @@ import java.util.Map;
  *
  * @since 0.3
  */
-public class CsvWriter implements ValidationResultWriter {
-    public static final int TRAINING_TIME = 0b0001;
-    public static final int TESTING_TIME = 0b0010;
-    public static final int CONFUSION_MATRIX = 0b0100;
-    public static final int CLASSIFICATION_ERROR = 0b1000;
+public class CsvValidationResultWriter implements ValidationResultWriter {
     private final Writer writer;
     private final char columnDelimiter;
     private final String rowDelimiter;
     private final NumberFormat numberFormat;
-    private List<String> sharedMetadataKeys;
-    private List<String> resultMetadataKeys;
-    private int evaluationResultMask;
+    private final List<String> sharedMetadataKeys;
+    private final List<String> resultMetadataKeys;
+    private final boolean writeConfusionMatrix;
 
 
-    private CsvWriter(Builder builder) {
+    private CsvValidationResultWriter(Builder builder) {
         writer = builder.writer;
         columnDelimiter = builder.columnDelimiter;
         rowDelimiter = builder.rowDelimiter;
         numberFormat = builder.numberFormat;
-        sharedMetadataKeys = builder.sharedMetadataKeys;
-        resultMetadataKeys = builder.resultMetadataKeys;
-        evaluationResultMask = builder.evaluationResultMask;
+        sharedMetadataKeys = builder.sharedMetadataColumns;
+        resultMetadataKeys = builder.resultMetadataColumns;
+        writeConfusionMatrix = builder.writeConfusionMatrix;
     }
 
     @Override
@@ -85,33 +81,27 @@ public class CsvWriter implements ValidationResultWriter {
                 sb.append(columnDelimiter);
             }
 
-            if ((evaluationResultMask & TRAINING_TIME) != 0) {
-                sb.append(item.getTrainingTime());
-                sb.append(columnDelimiter);
-            }
+            sb.append(item.getTrainingTime());
+            sb.append(columnDelimiter);
 
-            if ((evaluationResultMask & TESTING_TIME) != 0) {
-                sb.append(item.getTestingTime());
-                sb.append(columnDelimiter);
-            }
+            sb.append(item.getTestingTime());
+            sb.append(columnDelimiter);
 
             double[][] confusionMatrix = item.getConfusionMatrix();
-            if ((evaluationResultMask & CLASSIFICATION_ERROR) != 0) {
-                double globalSum = 0;
-                double firstDiagonalSum = 0;
-                for (int i = 0; i < confusionMatrix.length; i++) {
-                    for (int j = 0; j < confusionMatrix[i].length; j++) {
-                        globalSum += confusionMatrix[i][j];
-                        if (i == j) {
-                            firstDiagonalSum += confusionMatrix[i][j];
-                        }
+            double globalSum = 0;
+            double firstDiagonalSum = 0;
+            for (int i = 0; i < confusionMatrix.length; i++) {
+                for (int j = 0; j < confusionMatrix[i].length; j++) {
+                    globalSum += confusionMatrix[i][j];
+                    if (i == j) {
+                        firstDiagonalSum += confusionMatrix[i][j];
                     }
                 }
-                sb.append(numberFormat.format(1 - firstDiagonalSum / globalSum));
-                sb.append(columnDelimiter);
             }
+            sb.append(numberFormat.format(1 - firstDiagonalSum / globalSum));
+            sb.append(columnDelimiter);
 
-            if ((evaluationResultMask & CONFUSION_MATRIX) != 0) {
+            if (writeConfusionMatrix) {
                 for (double[] row : confusionMatrix) {
                     for (double value : row) {
                         sb.append(numberFormat.format(value));
@@ -143,11 +133,11 @@ public class CsvWriter implements ValidationResultWriter {
         private char columnDelimiter;
         private String rowDelimiter;
         private NumberFormat numberFormat;
-        private int evaluationResultMask;
-        private List<String> sharedMetadataKeys;
-        private List<String> resultMetadataKeys;
+        private List<String> sharedMetadataColumns;
+        private List<String> resultMetadataColumns;
+        private boolean writeConfusionMatrix;
         private int numClasses;
-        private boolean writeHeaders;
+        private boolean writeHeader;
         private boolean appendToFile;
 
         public Builder(Path outputPath) {
@@ -156,13 +146,13 @@ public class CsvWriter implements ValidationResultWriter {
             // default values
             columnDelimiter = ',';
             rowDelimiter = "\n";
-            sharedMetadataKeys = Collections.emptyList();
-            resultMetadataKeys = Collections.emptyList();
-            evaluationResultMask = TRAINING_TIME | TESTING_TIME | CLASSIFICATION_ERROR;
-            writeHeaders = false;
             numberFormat = NumberFormat.getNumberInstance(Locale.ENGLISH);
-            appendToFile = false;
+            sharedMetadataColumns = Collections.emptyList();
+            resultMetadataColumns = Collections.emptyList();
+            writeConfusionMatrix = false;
             numClasses = 0;
+            writeHeader = false;
+            appendToFile = false;
         }
 
         public Builder columnDelimiter(char columnDelimiter) {
@@ -180,18 +170,18 @@ public class CsvWriter implements ValidationResultWriter {
             return this;
         }
 
-        public Builder sharedMetadataKeys(List<String> sharedMetadataKeys) {
-            this.sharedMetadataKeys = sharedMetadataKeys;
+        public Builder sharedMetadataColumns(List<String> columnNames) {
+            this.sharedMetadataColumns = columnNames;
             return this;
         }
 
-        public Builder resultMetadataKeys(List<String> resultMetadataKeys) {
-            this.resultMetadataKeys = resultMetadataKeys;
+        public Builder resultMetadataColumns(List<String> columnNames) {
+            this.resultMetadataColumns = columnNames;
             return this;
         }
 
-        public Builder evaluationResultMask(int mask) {
-            this.evaluationResultMask = mask;
+        public Builder writeConfusionMatrix(boolean writeConfusionMatrix) {
+            this.writeConfusionMatrix = writeConfusionMatrix;
             return this;
         }
 
@@ -204,7 +194,7 @@ public class CsvWriter implements ValidationResultWriter {
         }
 
         public Builder writeHeader(boolean writeHeaders) {
-            this.writeHeaders = writeHeaders;
+            this.writeHeader = writeHeaders;
             return this;
         }
 
@@ -213,44 +203,36 @@ public class CsvWriter implements ValidationResultWriter {
             return this;
         }
 
-        public CsvWriter build() throws IOException {
+        public CsvValidationResultWriter build() throws IOException {
             if (!appendToFile) {
                 writer = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8);
             } else {
                 writer = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8, StandardOpenOption.APPEND);
             }
 
-            if (writeHeaders) {
+            if (writeHeader) {
+                if (writeConfusionMatrix && numClasses == 0) {
+                    throw new IllegalArgumentException("numClasses must be provided if writeHeader and writeConfusionMatrix are true");
+                }
+
                 StringBuilder sb = new StringBuilder();
-                for (String key : sharedMetadataKeys) {
+                for (String key : sharedMetadataColumns) {
                     sb.append(key);
                     sb.append(columnDelimiter);
                 }
-                for (String key : resultMetadataKeys) {
+                for (String key : resultMetadataColumns) {
                     sb.append(key);
                     sb.append(columnDelimiter);
                 }
 
-                if ((evaluationResultMask & TRAINING_TIME) != 0) {
-                    sb.append("training_time");
-                    sb.append(columnDelimiter);
-                }
+                sb.append("training_time");
+                sb.append(columnDelimiter);
+                sb.append("testing_time");
+                sb.append(columnDelimiter);
+                sb.append("classification_error");
+                sb.append(columnDelimiter);
 
-                if ((evaluationResultMask & TESTING_TIME) != 0) {
-                    sb.append("testing_time");
-                    sb.append(columnDelimiter);
-                }
-
-                if ((evaluationResultMask & CLASSIFICATION_ERROR) != 0) {
-                    sb.append("classification_error");
-                    sb.append(columnDelimiter);
-                }
-
-                if ((evaluationResultMask & CONFUSION_MATRIX) != 0) {
-                    if (numClasses == 0) {
-                        throw new IllegalArgumentException("numClasses must be provided if CONFUSION_MATRIX flag is selected");
-                    }
-
+                if (writeConfusionMatrix) {
                     for (int i = 1; i <= numClasses; i++) {
                         for (int j = 1; j <= numClasses; j++) {
                             sb.append(i);
@@ -267,7 +249,7 @@ public class CsvWriter implements ValidationResultWriter {
                 writer.write(sb.toString());
             }
 
-            return new CsvWriter(this);
+            return new CsvValidationResultWriter(this);
         }
     }
 }

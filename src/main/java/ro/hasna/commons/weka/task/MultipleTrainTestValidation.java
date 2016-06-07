@@ -45,7 +45,7 @@ import java.util.logging.Logger;
  *                                        .build();
  *      List<ValidationResult> results = task.call(); //the method blocks the current thread until it finishes the computation
  *
- *      ValidationResultWriter writer = new CsvWriter("path/to/result.csv").build();
+ *      ValidationResultWriter writer = new CsvValidationResultWriter("path/to/result.csv").build();
  *      writer.write(results);
  *      writer.close();
  * }</pre>

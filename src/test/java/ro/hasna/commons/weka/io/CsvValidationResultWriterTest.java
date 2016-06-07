@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 /**
  * @since 0.3
  */
-public class CsvWriterTest {
+public class CsvValidationResultWriterTest {
     private static Path TMP_OUTPUT_PATH = Paths.get("tmp_csv_builder.csv");
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -52,12 +52,12 @@ public class CsvWriterTest {
 
     @Test
     public void testAppend() throws Exception {
-        CsvWriter writer = new CsvWriter.Builder(TMP_OUTPUT_PATH)
+        CsvValidationResultWriter writer = new CsvValidationResultWriter.Builder(TMP_OUTPUT_PATH)
                 .writeHeader(true)
                 .build();
         writer.close();
 
-        writer = new CsvWriter.Builder(TMP_OUTPUT_PATH)
+        writer = new CsvValidationResultWriter.Builder(TMP_OUTPUT_PATH)
                 .appendToFile(true)
                 .writeHeader(true)
                 .build();
@@ -72,7 +72,7 @@ public class CsvWriterTest {
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("numClasses must be strictly positive");
 
-        new CsvWriter.Builder(TMP_OUTPUT_PATH)
+        new CsvValidationResultWriter.Builder(TMP_OUTPUT_PATH)
                 .numClasses(0)
                 .build();
     }
@@ -80,24 +80,22 @@ public class CsvWriterTest {
     @Test
     public void testMissingNumClasses() throws Exception {
         thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage("numClasses must be provided if CONFUSION_MATRIX flag is selected");
+        thrown.expectMessage("numClasses must be provided if writeHeader and writeConfusionMatrix are true");
 
-        new CsvWriter.Builder(TMP_OUTPUT_PATH)
-                .evaluationResultMask(CsvWriter.CONFUSION_MATRIX)
+        new CsvValidationResultWriter.Builder(TMP_OUTPUT_PATH)
+                .writeConfusionMatrix(true)
                 .writeHeader(true)
                 .build();
     }
 
     @Test
     public void testWrittenHeader() throws Exception {
-        int mask = CsvWriter.TRAINING_TIME | CsvWriter.TESTING_TIME | CsvWriter.CLASSIFICATION_ERROR | CsvWriter.CONFUSION_MATRIX;
-
-        CsvWriter writer = new CsvWriter.Builder(TMP_OUTPUT_PATH)
+        CsvValidationResultWriter writer = new CsvValidationResultWriter.Builder(TMP_OUTPUT_PATH)
                 .columnDelimiter(';')
                 .rowDelimiter("\n")
-                .sharedMetadataKeys(Collections.singletonList("flag"))
-                .resultMetadataKeys(MultipleTrainTestValidation.RESULT_METADATA_KEYS)
-                .evaluationResultMask(mask)
+                .sharedMetadataColumns(Collections.singletonList("flag"))
+                .resultMetadataColumns(MultipleTrainTestValidation.RESULT_METADATA_KEYS)
+                .writeConfusionMatrix(true)
                 .numClasses(3)
                 .writeHeader(true)
                 .build();
@@ -128,18 +126,17 @@ public class CsvWriterTest {
 
         ValidationResult validationResult = new TrainTestValidation(classifier, train, test).call();
 
-        int mask = CsvWriter.TRAINING_TIME | CsvWriter.TESTING_TIME | CsvWriter.CLASSIFICATION_ERROR | CsvWriter.CONFUSION_MATRIX;
         Map<String, Object> sharedMetadata = new HashMap<>();
         sharedMetadata.put("classifier", "KNN");
         sharedMetadata.put("train", train.relationName());
         sharedMetadata.put("test", test.relationName());
 
-        CsvWriter writer = new CsvWriter.Builder(TMP_OUTPUT_PATH)
+        CsvValidationResultWriter writer = new CsvValidationResultWriter.Builder(TMP_OUTPUT_PATH)
                 .columnDelimiter(';')
                 .rowDelimiter("\n")
                 .numberFormat(numberFormat)
-                .sharedMetadataKeys(Arrays.asList("classifier", "train", "test"))
-                .evaluationResultMask(mask)
+                .sharedMetadataColumns(Arrays.asList("classifier", "train", "test"))
+                .writeConfusionMatrix(true)
                 .numClasses(train.numClasses())
                 .writeHeader(false)
                 .build();
@@ -162,5 +159,4 @@ public class CsvWriterTest {
         BufferedReader reader = Files.newBufferedReader(path);
         return reader.lines().map(s -> s.split(";")).collect(Collectors.toList());
     }
-
 }

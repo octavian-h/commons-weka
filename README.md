@@ -14,7 +14,7 @@ The goal of this utility is to provide optimised functions to run validation tas
 Add the following dependency to your maven project.
 ```xml
 <dependency>
-    <groupId>ro.hasna.commons.weka</groupId>
+    <groupId>ro.hasna.commons</groupId>
     <artifactId>commons-weka</artifactId>
     <version>0.3</version>
 </dependency>

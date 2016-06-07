@@ -21,6 +21,8 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
+ * Class used for storing the results of different validations.
+ *
  * @since 0.1
  */
 public class ValidationResult {
@@ -55,6 +57,9 @@ public class ValidationResult {
         return testingTime;
     }
 
+    /**
+     * Add extra information to the validation result.
+     */
     public void putMetadata(String key, Object value) {
         if (metadata == null) {
             metadata = new HashMap<>();
@@ -62,6 +67,9 @@ public class ValidationResult {
         metadata.put(key, value);
     }
 
+    /**
+     * Retrieve extra information from the validation result.
+     */
     public Object getMetadataValue(String key) {
         if (metadata == null) {
             return null;
@@ -69,6 +77,9 @@ public class ValidationResult {
         return metadata.get(key);
     }
 
+    /**
+     * Get all extra information stored in this validation result.
+     */
     public Map<String, Object> getMetadata() {
         return metadata;
     }

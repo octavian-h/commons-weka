@@ -137,7 +137,6 @@ public class CsvValidationResultWriterTest {
                 .numberFormat(numberFormat)
                 .sharedMetadataColumns(Arrays.asList("classifier", "train", "test"))
                 .writeConfusionMatrix(true)
-                .numClasses(train.numClasses())
                 .writeHeader(false)
                 .build();
         writer.write(validationResult, sharedMetadata);

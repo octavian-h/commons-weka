@@ -30,6 +30,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * Utility functions for Weka library.
+ *
  * @since 0.1
  */
 public class WekaUtils {

@@ -31,9 +31,9 @@ import java.util.concurrent.Callable;
  *      Instances test = WekaUtils.readInstances("path/to/test.arff");
  *      ValidationResult result = new TrainTestValidation(classifier, train, test).call();
  *
- *      try(ValidationResultWriter writer = new CsvValidationResultWriter("path/to/result.csv").build()){
- *          writer.write(result);
- *      }
+ *      ValidationResultWriter writer = new CsvValidationResultWriter("path/to/result.csv").build();
+ *      writer.write(result);
+ *      writer.close();
  * }</pre>
  *
  * @since 0.1

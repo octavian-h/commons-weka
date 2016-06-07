@@ -43,7 +43,7 @@ import java.util.logging.Logger;
  *                                        .trainSizePercentages(Arrays.asList(0.6, 0.7, 0.8))
  *                                        .iterations(10)
  *                                        .build();
- *      List<ValidationResult> results = task.call(); //the method blocks the current thread until it finishes the computation
+ *      List<ValidationResult> results = task.call();
  *
  *      ValidationResultWriter writer = new CsvValidationResultWriter("path/to/result.csv").build();
  *      writer.write(results);
@@ -158,7 +158,13 @@ public class MultipleTrainTestValidation implements Callable<List<ValidationResu
             this.closeExecutorService = true;
         }
 
-
+        /**
+         * Configure the sizes of the chunks from the train instances that are used to train the classifier.
+         * The default value is a list with one element: 100% which means that it uses all the instances from the train set.
+         *
+         * @param percentages the percentages list
+         * @return a reference to this {@code MultipleTrainTestValidation.Builder} object to fulfill the "Builder" pattern
+         */
         public Builder trainSizePercentages(List<Double> percentages) {
             if (percentages.isEmpty()) {
                 throw new IllegalArgumentException("percentages list is empty");
@@ -173,6 +179,13 @@ public class MultipleTrainTestValidation implements Callable<List<ValidationResu
             return this;
         }
 
+        /**
+         * Configure the number of iterations. At each step the train instances are shuffled.
+         * The default values is one iteration.
+         *
+         * @param iterations the number of iterations
+         * @return a reference to this {@code MultipleTrainTestValidation.Builder} object to fulfill the "Builder" pattern
+         */
         public Builder iterations(int iterations) {
             if (iterations <= 0) {
                 throw new IllegalArgumentException("iterations must be positive");
@@ -182,19 +195,36 @@ public class MultipleTrainTestValidation implements Callable<List<ValidationResu
             return this;
         }
 
+        /**
+         * Set a custom executor service for this validation task.
+         *
+         * @param executorService the executor service
+         * @return a reference to this {@code MultipleTrainTestValidation.Builder} object to fulfill the "Builder" pattern
+         */
         public Builder executorService(ExecutorService executorService) {
             this.executorService = executorService;
             return this;
         }
 
+        /**
+         * Configure the validation task to close or not the executor service.
+         * The default values is true.
+         *
+         * @param closeExecutorService a boolean for closing or not the executor service
+         * @return a reference to this {@code MultipleTrainTestValidation.Builder} object to fulfill the "Builder" pattern
+         */
         public Builder closeExecutorService(boolean closeExecutorService) {
             this.closeExecutorService = closeExecutorService;
             return this;
         }
 
         public MultipleTrainTestValidation build() {
-            if (this.executorService == null) {
-                this.executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+            if (executorService == null) {
+                if (!closeExecutorService) {
+                    throw new IllegalArgumentException("closeExecutorService must be true if using the internal executorService");
+                }
+
+                executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
             }
 
             return new MultipleTrainTestValidation(this);

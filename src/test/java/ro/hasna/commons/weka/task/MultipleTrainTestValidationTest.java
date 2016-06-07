@@ -113,6 +113,16 @@ public class MultipleTrainTestValidationTest {
     }
 
     @Test
+    public void testWrongCloseExecutorServiceValue() throws Exception {
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage("closeExecutorService must be true if using the internal executorService");
+
+        new MultipleTrainTestValidation.Builder(classifier, train, test)
+                .closeExecutorService(false)
+                .build();
+    }
+
+    @Test
     public void testWrongClassifier() throws Exception {
         thrown.expect(ExecutionException.class);
         thrown.expectMessage(StringContains.containsString("Cannot handle multi-valued nominal class!"));

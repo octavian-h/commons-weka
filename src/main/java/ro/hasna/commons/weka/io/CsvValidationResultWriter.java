@@ -151,40 +151,88 @@ public class CsvValidationResultWriter implements ValidationResultWriter {
             resultMetadataColumns = Collections.emptyList();
             writeConfusionMatrix = false;
             numClasses = 0;
-            writeHeader = false;
+            writeHeader = true;
             appendToFile = false;
         }
 
-        public Builder columnDelimiter(char columnDelimiter) {
-            this.columnDelimiter = columnDelimiter;
+        /**
+         * Configure the CSV column delimiter.
+         * The default value is ','.
+         *
+         * @param delimiter the column delimiter
+         * @return a reference to this {@code CsvValidationResultWriter.Builder} object to fulfill the "Builder" pattern
+         */
+        public Builder columnDelimiter(char delimiter) {
+            this.columnDelimiter = delimiter;
             return this;
         }
 
-        public Builder rowDelimiter(String rowDelimiter) {
-            this.rowDelimiter = rowDelimiter;
+        /**
+         * Configure the CSV row delimiter.
+         * The default value is "\n".
+         *
+         * @param delimiter the row delimiter
+         * @return a reference to this {@code CsvValidationResultWriter.Builder} object to fulfill the "Builder" pattern
+         */
+        public Builder rowDelimiter(String delimiter) {
+            this.rowDelimiter = delimiter;
             return this;
         }
 
+        /**
+         * Configure the number format to use for writing the numbers.
+         * The default format is the one for English language.
+         *
+         * @param numberFormat the number format
+         * @return a reference to this {@code CsvValidationResultWriter.Builder} object to fulfill the "Builder" pattern
+         */
         public Builder numberFormat(NumberFormat numberFormat) {
             this.numberFormat = numberFormat;
             return this;
         }
 
-        public Builder sharedMetadataColumns(List<String> columnNames) {
-            this.sharedMetadataColumns = columnNames;
+        /**
+         * Configure the list of columns from the shared metadata that will be written to the CSV file.
+         *
+         * @param columns the keys from the shared metadata map
+         * @return a reference to this {@code CsvValidationResultWriter.Builder} object to fulfill the "Builder" pattern
+         */
+        public Builder sharedMetadataColumns(List<String> columns) {
+            this.sharedMetadataColumns = columns;
             return this;
         }
 
-        public Builder resultMetadataColumns(List<String> columnNames) {
-            this.resultMetadataColumns = columnNames;
+        /**
+         * Configure the list of columns from the result metadata that will be written to the CSV file.
+         *
+         * @param columns the keys from the result metadata map
+         * @return a reference to this {@code CsvValidationResultWriter.Builder} object to fulfill the "Builder" pattern
+         */
+        public Builder resultMetadataColumns(List<String> columns) {
+            this.resultMetadataColumns = columns;
             return this;
         }
 
+        /**
+         * Configure the CSV writer to write the confusion matrix.
+         * The confusion matrix will be represented as a one dimensional array.
+         * The default value is false.
+         *
+         * @param writeConfusionMatrix a boolean for writing or not the confusion matrix.
+         * @return a reference to this {@code CsvValidationResultWriter.Builder} object to fulfill the "Builder" pattern
+         */
         public Builder writeConfusionMatrix(boolean writeConfusionMatrix) {
             this.writeConfusionMatrix = writeConfusionMatrix;
             return this;
         }
 
+        /**
+         * Configure the number of classes from the validation result(s).
+         * This number must be provided if the CSV writer needs to write the header and the confusion matrix.
+         *
+         * @param numClasses the number of classes
+         * @return a reference to this {@code CsvValidationResultWriter.Builder} object to fulfill the "Builder" pattern
+         */
         public Builder numClasses(int numClasses) {
             if (numClasses <= 0) {
                 throw new IllegalArgumentException("numClasses must be strictly positive");
@@ -193,11 +241,25 @@ public class CsvValidationResultWriter implements ValidationResultWriter {
             return this;
         }
 
+        /**
+         * Configure the CSV writer to write the CSV header.
+         * The default value is true.
+         *
+         * @param writeHeaders a boolean for writing or not the header
+         * @return a reference to this {@code CsvValidationResultWriter.Builder} object to fulfill the "Builder" pattern
+         */
         public Builder writeHeader(boolean writeHeaders) {
             this.writeHeader = writeHeaders;
             return this;
         }
 
+        /**
+         * Configure the CSv writer to append to the file.
+         * The default value is false which means it (re)creates the output file.
+         *
+         * @param appendToFile a boolean to append or not the output file
+         * @return a reference to this {@code CsvValidationResultWriter.Builder} object to fulfill the "Builder" pattern
+         */
         public Builder appendToFile(boolean appendToFile) {
             this.appendToFile = appendToFile;
             return this;

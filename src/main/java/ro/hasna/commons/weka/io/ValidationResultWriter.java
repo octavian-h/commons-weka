@@ -29,7 +29,7 @@ import java.util.Map;
 public interface ValidationResultWriter extends AutoCloseable, Flushable {
 
     /**
-     * Write a list of validation results.
+     * Write a list of validation results with the given shared metadata.
      *
      * @param results        the list of validation results
      * @param sharedMetadata metadata that is common for all the results
@@ -48,7 +48,7 @@ public interface ValidationResultWriter extends AutoCloseable, Flushable {
     }
 
     /**
-     * Write the validation result.
+     * Write the validation result with the given shared metadata.
      *
      * @param result         the validation result
      * @param sharedMetadata metadata that is common for all the results

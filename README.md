@@ -9,6 +9,7 @@ The goal of this utility is to provide optimised functions to run validation tas
 ## Features ##
 
 * Multi-threaded evaluation comparison of variable train set size
+* Hold one out validation
 
 ## Usage ##
 Add the following dependency to your maven project.

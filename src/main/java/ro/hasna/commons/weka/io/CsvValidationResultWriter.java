@@ -16,6 +16,7 @@
 package ro.hasna.commons.weka.io;
 
 import ro.hasna.commons.weka.type.ValidationResult;
+import ro.hasna.commons.weka.util.WekaUtils;
 
 import java.io.IOException;
 import java.io.Writer;
@@ -88,17 +89,7 @@ public class CsvValidationResultWriter implements ValidationResultWriter {
             sb.append(columnDelimiter);
 
             double[][] confusionMatrix = item.getConfusionMatrix();
-            double globalSum = 0;
-            double firstDiagonalSum = 0;
-            for (int i = 0; i < confusionMatrix.length; i++) {
-                for (int j = 0; j < confusionMatrix[i].length; j++) {
-                    globalSum += confusionMatrix[i][j];
-                    if (i == j) {
-                        firstDiagonalSum += confusionMatrix[i][j];
-                    }
-                }
-            }
-            sb.append(numberFormat.format(1 - firstDiagonalSum / globalSum));
+            sb.append(numberFormat.format(WekaUtils.getIncorrectPercentage(confusionMatrix)));
             sb.append(columnDelimiter);
 
             if (writeConfusionMatrix) {

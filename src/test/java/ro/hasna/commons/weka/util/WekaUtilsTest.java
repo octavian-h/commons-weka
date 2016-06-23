@@ -29,7 +29,6 @@ import java.util.Map;
  * @since 0.1
  */
 public class WekaUtilsTest {
-
     @Test
     public void testReadAndWriteInstances() throws Exception {
         Instances instances = WekaUtils.readInstances(Paths.get(getClass().getResource("/iris.arff").toURI()));
@@ -80,5 +79,17 @@ public class WekaUtilsTest {
         Assert.assertEquals(47, classesDistribution.get(0d).intValue());
         Assert.assertEquals(47, classesDistribution.get(1d).intValue());
         Assert.assertEquals(47, classesDistribution.get(2d).intValue());
+    }
+
+    @Test
+    public void testGetIncorrectPercentage() throws Exception {
+        double[][] matrix = {
+                {2, 0, 0},
+                {0, 4, 0},
+                {5, 0, 14}
+        };
+        double incorrectPercentage = WekaUtils.getIncorrectPercentage(matrix);
+
+        Assert.assertEquals(0.2, incorrectPercentage, 0.0001);
     }
 }

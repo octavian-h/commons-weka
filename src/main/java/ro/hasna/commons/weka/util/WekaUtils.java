@@ -161,4 +161,24 @@ public class WekaUtils {
         }
         return result;
     }
+
+    /**
+     * Compute the incorrect percentage from the confusion matrix.
+     *
+     * @param confusionMatrix the confusion matrix
+     * @return the incorrect percentage between 0 and 1
+     */
+    public static double getIncorrectPercentage(double[][] confusionMatrix) {
+        double globalSum = 0;
+        double firstDiagonalSum = 0;
+        for (int i = 0; i < confusionMatrix.length; i++) {
+            for (int j = 0; j < confusionMatrix[i].length; j++) {
+                globalSum += confusionMatrix[i][j];
+                if (i == j) {
+                    firstDiagonalSum += confusionMatrix[i][j];
+                }
+            }
+        }
+        return 1 - firstDiagonalSum / globalSum;
+    }
 }

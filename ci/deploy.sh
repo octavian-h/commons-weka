@@ -21,24 +21,35 @@ if [ "$TRAVIS_PULL_REQUEST" == "false" ] &&
    [ "$TRAVIS_TAG" == "" ] &&
    [[ "$COMMIT_MESSAGE" != "[maven-release-plugin]"* ]]; then
 
-    if [[ "$COMMIT_MESSAGE" != *"[no-deploy]"* ]] &&
-       [[ "$COMMIT_MESSAGE" != *"[start-release]"* ]]; then
+#    if [[ "$COMMIT_MESSAGE" != *"[no-deploy]"* ]] &&
+#       [[ "$COMMIT_MESSAGE" != *"[start-release]"* ]]; then
+#
+#        echo "Deploy Snapshot artifacts"
+#        mvn --batch-mode deploy -DskipTests=true --settings ci/maven-settings.xml
+#
+#    elif [[ "$COMMIT_MESSAGE" == *"[start-release]"* ]]; then
+#
+#        echo "Release artifacts"
+#         point HEAD to master branch (this is needed by the maven release plugin)
+#        git symbolic-ref HEAD refs/heads/master
+#
+#        mvn --batch-mode release:prepare --settings ci/maven-settings.xml
+#        mvn --batch-mode release:perform --settings ci/maven-settings.xml
 
-        echo "Deploy Snapshot artifacts"
-        mvn --batch-mode deploy -DskipTests=true --settings ci/maven-settings.xml
+        TAG="$(git describe --tags --abbrev=0)"
+        PACKAGE_NAME="${TAG%-*}" # delete the shortest substring from the end that starts with "-" (inclusive)
+        VERSION="${TAG##*-}" # delete the longest substring from the begging that ends with "-" (inclusive)
 
-    elif [[ "$COMMIT_MESSAGE" == *"[start-release]"* ]]; then
+        # Sync to Maven Central
+        curl --request POST \
+             --url "https://api.bintray.com/maven_central_sync/octavian-h/maven/$PACKAGE_NAME/versions/$VERSION" \
+             --user octavian-h:$BINTRAY_API_KEY \
+             --header "content-type: application/json" \
+             --data "{\"username\": \"$SONATYPE_USER\",\"password\": \"$SONATYPE_TOKEN\",\"close\": \"1\"}"
 
-        echo "Release artifacts"
-        # point HEAD to master branch (this is needed by the maven release plugin)
-        git symbolic-ref HEAD refs/heads/master
-
-        mvn --batch-mode release:prepare --settings ci/maven-settings.xml
-        mvn --batch-mode release:perform --settings ci/maven-settings.xml
-
-    else
-        echo "Skip deploy/release"
-    fi
+#    else
+#        echo "Skip deploy/release"
+#    fi
 else
    echo "Skip deploy/release"
 fi

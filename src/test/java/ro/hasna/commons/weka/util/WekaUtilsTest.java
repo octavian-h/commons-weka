@@ -94,11 +94,24 @@ public class WekaUtilsTest {
     }
 
     @Test
-    public void testGetIncorrectPercentageForClusterConfusionMatrix() throws Exception {
+    public void testGetIncorrectPercentageMoreClusters() throws Exception {
         double[][] matrix = {
                 {2, 0, 0, 2},
                 {0, 4, 0, 1},
                 {5, 0, 9, 2}
+        };
+        double incorrectPercentage = WekaUtils.getIncorrectPercentage(matrix);
+
+        Assert.assertEquals(0.4, incorrectPercentage, 0.0001);
+    }
+
+    @Test
+    public void testGetIncorrectPercentageMoreClasses() throws Exception {
+        double[][] matrix = {
+                {2, 0, 0},
+                {0, 4, 0},
+                {5, 0, 9},
+                {2, 1, 2}
         };
         double incorrectPercentage = WekaUtils.getIncorrectPercentage(matrix);
 

@@ -82,7 +82,7 @@ public class ClusterValidationTest {
     }
 
     @Test
-    public void testReorderClusters() throws Exception {
+    public void testReorderClustersMoreClusters() throws Exception {
         double[][] matrix = {
                 {20, 21, 24, 20, 14},
                 {18, 20, 20, 20, 20},
@@ -96,6 +96,29 @@ public class ClusterValidationTest {
                 {16, 19, 26, 20, 22}
         };
         task.reorderClustersInConfusionMatrix(3, 5, matrix, clusterClass);
+
+        for (int i = 0; i < expectedMatrix.length; i++) {
+            double[] expectedRow = expectedMatrix[i];
+            double[] predictedRow = matrix[i];
+            Assert.assertArrayEquals(expectedRow, predictedRow, 0.1);
+        }
+    }
+
+    @Test
+    public void testReorderClustersMoreClasses() throws Exception {
+        double[][] matrix = {
+                {20, 21, 0},
+                {18, 20, 0},
+                {22, 19, 0}
+        };
+        int[] clusterClass = {2, 0};
+
+        double[][] expectedMatrix = {
+                {21, 0, 20},
+                {20, 0, 18},
+                {19, 0, 22}
+        };
+        task.reorderClustersInConfusionMatrix(3, 2, matrix, clusterClass);
 
         for (int i = 0; i < expectedMatrix.length; i++) {
             double[] expectedRow = expectedMatrix[i];

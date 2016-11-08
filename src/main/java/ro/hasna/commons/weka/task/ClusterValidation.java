@@ -126,9 +126,13 @@ public class ClusterValidation implements Callable<ValidationResult> {
         for (int k = 0; k < numberOfClusters; k++) {
             int p = clusterClass[k];
             if (p != k && p != -1) {
-                int aux = clusterClass[p];
-                clusterClass[p] = p;
-                clusterClass[k] = aux;
+                if (p < numberOfClusters) {
+                    int aux = clusterClass[p];
+                    clusterClass[p] = p;
+                    clusterClass[k] = aux;
+                } else {
+                    clusterClass[k] = -1;
+                }
 
                 for (int i = 0; i < numClasses; i++) {
                     double tmp = confusionMatrix[i][k];

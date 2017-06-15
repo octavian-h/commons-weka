@@ -113,6 +113,42 @@ public class WekaUtils {
     }
 
     /**
+     * Divide the data in multiple sets.
+     *
+     * @param instances the data set
+     * @param numSets   the number of sets
+     * @return an array with numSets instances
+     */
+    public static Instances[] getSetsOfInstancesStratified(Instances instances, int numSets) {
+        Instances[] result = new Instances[numSets];
+        int estimatedSize = instances.size() / numSets;
+        for (int i = 0; i < numSets; i++) {
+            result[i] = new Instances(instances, estimatedSize);
+        }
+
+        Map<Double, Integer> f = getClassesDistribution(instances);
+        Map<Double, Tuple> g = new HashMap<>();
+        for (Map.Entry<Double, Integer> entry : f.entrySet()) {
+            int total = entry.getValue() / numSets;
+            g.put(entry.getKey(), new Tuple(0, total, total));
+        }
+        for (Instance instance : instances) {
+            double key = instance.classValue();
+            Tuple tuple = g.get(key);
+            if (tuple.remainingInstances == 0) {
+                tuple.currentSet++;
+                tuple.remainingInstances = tuple.totalInstances;
+            }
+
+            if (tuple.currentSet < numSets) {
+                result[tuple.currentSet].add(instance);
+                tuple.remainingInstances--;
+            }
+        }
+        return result;
+    }
+
+    /**
      * Compute the distribution of the classes from the instances.
      *
      * @param instances the data set
@@ -180,5 +216,17 @@ public class WekaUtils {
             }
         }
         return 1 - firstDiagonalSum / globalSum;
+    }
+
+    private static class Tuple {
+        int currentSet;
+        int remainingInstances;
+        int totalInstances;
+
+        Tuple(int currentSet, int remainingInstances, int totalInstances) {
+            this.currentSet = currentSet;
+            this.remainingInstances = remainingInstances;
+            this.totalInstances = totalInstances;
+        }
     }
 }

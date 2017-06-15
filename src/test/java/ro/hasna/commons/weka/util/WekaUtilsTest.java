@@ -117,4 +117,23 @@ public class WekaUtilsTest {
 
         Assert.assertEquals(0.4, incorrectPercentage, 0.0001);
     }
+
+    @Test
+    public void testMultipleDivideInstances() throws Exception {
+        Instances instances = WekaUtils.readInstances(Paths.get(getClass().getResource("/iris.arff").toURI()));
+        Instances[] v = WekaUtils.getSetsOfInstancesStratified(instances, 10);
+
+        Assert.assertEquals(v.length, 10);
+
+        for (int i = 0; i < 10; i++) {
+            int f[] = new int[3];
+            for (Instance instance : v[i]) {
+                f[(int) instance.classValue()]++;
+            }
+
+            Assert.assertEquals(f[0], 5);
+            Assert.assertEquals(f[1], 5);
+            Assert.assertEquals(f[2], 5);
+        }
+    }
 }

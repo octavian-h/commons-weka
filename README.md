@@ -17,20 +17,8 @@ Add the following dependency to your maven project.
 <dependency>
     <groupId>ro.hasna.commons</groupId>
     <artifactId>commons-weka</artifactId>
-    <version>0.4</version>
+    <version>0.5</version>
 </dependency>
-```
-
-And also add the following custom repository.
-```xml
-<repository>
-    <snapshots>
-        <enabled>false</enabled>
-    </snapshots>
-    <id>central</id>
-    <name>bintray</name>
-    <url>http://jcenter.bintray.com</url>
-</repository>
 ```
 
 ### Code Example ###
@@ -59,6 +47,7 @@ class Test{
     }
 }
 ```
+
 ## Planned features ##
 
 * Multi-threaded cross-domain evaluation comparison ...

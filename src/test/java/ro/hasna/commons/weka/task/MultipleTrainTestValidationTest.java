@@ -16,7 +16,10 @@
 package ro.hasna.commons.weka.task;
 
 import org.hamcrest.core.StringContains;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import ro.hasna.commons.weka.type.ValidationResult;
 import ro.hasna.commons.weka.util.WekaUtils;
@@ -34,6 +37,9 @@ import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertThat;
 
 /**
  * @since 0.3
@@ -57,7 +63,7 @@ public class MultipleTrainTestValidationTest {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         classifier = null;
         train = null;
         test = null;
@@ -73,17 +79,17 @@ public class MultipleTrainTestValidationTest {
                 .build();
         List<ValidationResult> validationResults = task.call();
 
-        Assert.assertEquals(15, validationResults.size());//iterations * percentages
+        assertThat(validationResults.size(), is(15));//iterations * percentages
         for (ValidationResult validationResult : validationResults) {
-            Assert.assertEquals(1, validationResult.getMetadata().size());
+            assertThat(validationResult.getMetadata().size(), is(1));
             String str = validationResult.getMetadataValue(MultipleTrainTestValidation.TRAIN_SIZE_PERCENTAGE_KEY).toString();
             int percentage = (int) (numberFormat.parse(str).doubleValue() * 10);
-            Assert.assertTrue(6 <= percentage && percentage <= 8); //train_size_percentage
+            assertThat(percentage, allOf(greaterThanOrEqualTo(6), lessThanOrEqualTo(8))); //train_size_percentage
         }
     }
 
     @Test
-    public void testWrongNumberOfIterations() throws Exception {
+    public void testWrongNumberOfIterations() {
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("iterations must be positive");
 
@@ -93,7 +99,7 @@ public class MultipleTrainTestValidationTest {
     }
 
     @Test
-    public void testEmptyPercentagesList() throws Exception {
+    public void testEmptyPercentagesList() {
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("percentages list is empty");
 
@@ -103,7 +109,7 @@ public class MultipleTrainTestValidationTest {
     }
 
     @Test
-    public void testWrongPercentagesValues() throws Exception {
+    public void testWrongPercentagesValues() {
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("percentages must be between 0 (exclusive) and 1 (inclusive)");
 
@@ -113,7 +119,7 @@ public class MultipleTrainTestValidationTest {
     }
 
     @Test
-    public void testWrongCloseExecutorServiceValue() throws Exception {
+    public void testWrongCloseExecutorServiceValue() {
         thrown.expect(IllegalArgumentException.class);
         thrown.expectMessage("closeExecutorService must be true if using the internal executorService");
 

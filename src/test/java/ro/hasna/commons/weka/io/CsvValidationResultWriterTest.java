@@ -16,7 +16,6 @@
 package ro.hasna.commons.weka.io;
 
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -37,11 +36,15 @@ import java.text.NumberFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertThat;
+
 /**
  * @since 0.3
  */
 public class CsvValidationResultWriterTest {
     private static Path TMP_OUTPUT_PATH = Paths.get("tmp_csv_builder.csv");
+
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
@@ -64,7 +67,7 @@ public class CsvValidationResultWriterTest {
         writer.close();
 
         List<String> lines = Files.readAllLines(TMP_OUTPUT_PATH);
-        Assert.assertEquals(2, lines.size());
+        assertThat(lines.size(), is(2));
     }
 
     @Test
@@ -102,14 +105,12 @@ public class CsvValidationResultWriterTest {
         writer.close();
 
         List<String[]> values = readCsvFile(TMP_OUTPUT_PATH);
-        Assert.assertEquals(1, values.size()); //header
-        Assert.assertEquals(14, values.get(0).length); //shared metadata (1) + result metadata (1) + training time + testing time + error + classes * classes
+        assertThat(values.size(), is(1)); //header
+        assertThat(values.get(0).length, is(14)); //shared metadata (1) + result metadata (1) + training time + testing time + error + classes * classes
         String[] header = values.get(0);
         String[] expectedHeader = {"flag", "train_size_percentage", "training_time", "testing_time", "classification_error",
                 "1_1", "1_2", "1_3", "2_1", "2_2", "2_3", "3_1", "3_2", "3_3"};
-        for (int i = 0; i < header.length; i++) {
-            Assert.assertEquals(expectedHeader[i], header[i]);
-        }
+        assertThat(header, is(expectedHeader));
     }
 
     @Test
@@ -143,15 +144,15 @@ public class CsvValidationResultWriterTest {
         writer.close();
 
         List<String[]> values = readCsvFile(TMP_OUTPUT_PATH);
-        Assert.assertEquals(1, values.size());
+        assertThat(values.size(), is(1));
         String[] line = values.get(0);
-        Assert.assertEquals(15, line.length);
-        Assert.assertEquals("KNN", line[0]);
-        Assert.assertEquals("iris_TRAIN", line[1]);
-        Assert.assertEquals("iris_TEST", line[2]);
-        Assert.assertTrue(Long.parseLong(line[3]) > 0); //training_time
-        Assert.assertTrue(Long.parseLong(line[4]) > 0); //testing_time
-        Assert.assertTrue(Double.parseDouble(line[5]) >= 0); //classification_error
+        assertThat(line.length, is(15));
+        assertThat(line[0], is("KNN"));
+        assertThat(line[1], is("iris_TRAIN"));
+        assertThat(line[2], is("iris_TEST"));
+        assertThat("training_time", Long.parseLong(line[3]), greaterThan(0L));
+        assertThat("testing_time", Long.parseLong(line[4]), greaterThan(0L));
+        assertThat("classification_error", Double.parseDouble(line[5]), greaterThanOrEqualTo(0D));
     }
 
     private List<String[]> readCsvFile(Path path) throws IOException {

@@ -16,7 +16,6 @@
 package ro.hasna.commons.weka.task;
 
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import ro.hasna.commons.weka.type.ValidationResult;
@@ -26,6 +25,11 @@ import weka.clusterers.SimpleKMeans;
 import weka.core.Instances;
 
 import java.nio.file.Paths;
+
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
+import static ro.hasna.commons.weka.util.IsCloseToArray.closeToArray;
 
 /**
  * @since 0.4
@@ -43,7 +47,7 @@ public class ClusterValidationTest {
     }
 
     @After
-    public void tearDown() throws Exception {
+    public void tearDown() {
         task = null;
         data = null;
         clusterer = null;
@@ -55,8 +59,8 @@ public class ClusterValidationTest {
 
         double[][] confusionMatrix = validationResult.getConfusionMatrix();
 
-        Assert.assertEquals(data.numClasses(), confusionMatrix.length);
-        Assert.assertTrue(confusionMatrix[0].length >= data.numClasses());
+        assertThat(confusionMatrix.length, is(data.numClasses()));
+        assertThat(confusionMatrix[0].length, greaterThanOrEqualTo(data.numClasses()));
     }
 
     @Test
@@ -64,11 +68,11 @@ public class ClusterValidationTest {
         ClusterValidation task = new ClusterValidation(clusterer, data);
         Instances unlabelledInstances = task.removeInstancesClasses();
 
-        Assert.assertEquals(data.numAttributes() - 1, unlabelledInstances.numAttributes());
+        assertThat(unlabelledInstances.numAttributes(), is(data.numAttributes() - 1));
     }
 
     @Test
-    public void testComputeClusterClass() throws Exception {
+    public void testComputeClusterClass() {
         double[][] matrix = {
                 {20, 21, 24, 20, 14},
                 {18, 20, 20, 20, 20},
@@ -78,11 +82,11 @@ public class ClusterValidationTest {
         int[] expected = {-1, 1, 0, -1, 2};
         int[] predicted = task.computeClusterClass(3, 5, matrix);
 
-        Assert.assertArrayEquals(expected, predicted);
+        assertThat(predicted, is(expected));
     }
 
     @Test
-    public void testReorderClustersMoreClusters() throws Exception {
+    public void testReorderClustersMoreClusters() {
         double[][] matrix = {
                 {20, 21, 24, 20, 14},
                 {18, 20, 20, 20, 20},
@@ -100,12 +104,12 @@ public class ClusterValidationTest {
         for (int i = 0; i < expectedMatrix.length; i++) {
             double[] expectedRow = expectedMatrix[i];
             double[] predictedRow = matrix[i];
-            Assert.assertArrayEquals(expectedRow, predictedRow, 0.1);
+            assertThat(predictedRow, closeToArray(expectedRow, 0.1));
         }
     }
 
     @Test
-    public void testReorderClustersMoreClasses() throws Exception {
+    public void testReorderClustersMoreClasses() {
         double[][] matrix = {
                 {20, 21, 0},
                 {18, 20, 0},
@@ -123,7 +127,7 @@ public class ClusterValidationTest {
         for (int i = 0; i < expectedMatrix.length; i++) {
             double[] expectedRow = expectedMatrix[i];
             double[] predictedRow = matrix[i];
-            Assert.assertArrayEquals(expectedRow, predictedRow, 0.1);
+            assertThat(predictedRow, closeToArray(expectedRow, 0.1));
         }
     }
 }

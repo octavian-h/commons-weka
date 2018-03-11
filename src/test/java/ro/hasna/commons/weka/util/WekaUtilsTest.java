@@ -15,7 +15,6 @@
  */
 package ro.hasna.commons.weka.util;
 
-import org.junit.Assert;
 import org.junit.Test;
 import weka.core.Instance;
 import weka.core.Instances;
@@ -25,10 +24,15 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.closeTo;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
+
 /**
  * @since 0.1
  */
 public class WekaUtilsTest {
+
     @Test
     public void testReadAndWriteInstances() throws Exception {
         Instances instances = WekaUtils.readInstances(Paths.get(getClass().getResource("/iris.arff").toURI()));
@@ -38,9 +42,9 @@ public class WekaUtilsTest {
 
         Files.delete(tmpOutputPath);
 
-        Assert.assertEquals(instances.relationName(), copy.relationName());
-        Assert.assertTrue(copy.equalHeaders(instances));
-        Assert.assertEquals(instances.size(), copy.size());
+        assertThat(instances.relationName(), is(copy.relationName()));
+        assertThat(copy.equalHeaders(instances), is(true));
+        assertThat(instances.size(), is(copy.size()));
     }
 
     @Test
@@ -48,7 +52,7 @@ public class WekaUtilsTest {
         Instances instances = WekaUtils.readInstances(Paths.get(getClass().getResource("/iris.arff").toURI()));
         Instances[] v = WekaUtils.getTrainAndTestInstancesStratified(instances, 0.8);
 
-        Assert.assertEquals(v[0].size(), v[1].size() * 4);
+        assertThat(v[0].size(), is(v[1].size() * 4));
 
         int trainSize = 0;
         for (Instance instance : v[0]) {
@@ -64,7 +68,15 @@ public class WekaUtilsTest {
             }
         }
 
-        Assert.assertEquals(trainSize, testSize * 4);
+        assertThat(trainSize, is(testSize * 4));
+    }
+
+    @Test
+    public void testDivideInstancesWithOneTrainInstance() throws Exception {
+        Instances instances = WekaUtils.readInstances(Paths.get(getClass().getResource("/iris.arff").toURI()));
+        Instances[] v = WekaUtils.getTrainAndTestInstancesStratified(instances, 0.002);
+
+        assertThat(v[0].size(), is(instances.numClasses()));
     }
 
     @Test
@@ -76,13 +88,13 @@ public class WekaUtilsTest {
         Instances balancedInstances = WekaUtils.getBalancedInstances(instances);
 
         Map<Double, Integer> classesDistribution = WekaUtils.getClassesDistribution(balancedInstances);
-        Assert.assertEquals(47, classesDistribution.get(0d).intValue());
-        Assert.assertEquals(47, classesDistribution.get(1d).intValue());
-        Assert.assertEquals(47, classesDistribution.get(2d).intValue());
+        assertThat(47, is(classesDistribution.get(0d)));
+        assertThat(47, is(classesDistribution.get(1d)));
+        assertThat(47, is(classesDistribution.get(2d)));
     }
 
     @Test
-    public void testGetIncorrectPercentage() throws Exception {
+    public void testGetIncorrectPercentage() {
         double[][] matrix = {
                 {2, 0, 0},
                 {0, 4, 0},
@@ -90,11 +102,11 @@ public class WekaUtilsTest {
         };
         double incorrectPercentage = WekaUtils.getIncorrectPercentage(matrix);
 
-        Assert.assertEquals(0.2, incorrectPercentage, 0.0001);
+        assertThat(incorrectPercentage, closeTo(0.2, 0.0001));
     }
 
     @Test
-    public void testGetIncorrectPercentageMoreClusters() throws Exception {
+    public void testGetIncorrectPercentageMoreClusters() {
         double[][] matrix = {
                 {2, 0, 0, 2},
                 {0, 4, 0, 1},
@@ -102,11 +114,11 @@ public class WekaUtilsTest {
         };
         double incorrectPercentage = WekaUtils.getIncorrectPercentage(matrix);
 
-        Assert.assertEquals(0.4, incorrectPercentage, 0.0001);
+        assertThat(incorrectPercentage, closeTo(0.4, 0.0001));
     }
 
     @Test
-    public void testGetIncorrectPercentageMoreClasses() throws Exception {
+    public void testGetIncorrectPercentageMoreClasses() {
         double[][] matrix = {
                 {2, 0, 0},
                 {0, 4, 0},
@@ -115,7 +127,7 @@ public class WekaUtilsTest {
         };
         double incorrectPercentage = WekaUtils.getIncorrectPercentage(matrix);
 
-        Assert.assertEquals(0.4, incorrectPercentage, 0.0001);
+        assertThat(incorrectPercentage, closeTo(0.4, 0.0001));
     }
 
     @Test
@@ -123,7 +135,7 @@ public class WekaUtilsTest {
         Instances instances = WekaUtils.readInstances(Paths.get(getClass().getResource("/iris.arff").toURI()));
         Instances[] v = WekaUtils.getSetsOfInstancesStratified(instances, 10);
 
-        Assert.assertEquals(v.length, 10);
+        assertThat(v.length, is(10));
 
         for (int i = 0; i < 10; i++) {
             int f[] = new int[3];
@@ -131,9 +143,9 @@ public class WekaUtilsTest {
                 f[(int) instance.classValue()]++;
             }
 
-            Assert.assertEquals(f[0], 5);
-            Assert.assertEquals(f[1], 5);
-            Assert.assertEquals(f[2], 5);
+            assertThat(f[0], is(5));
+            assertThat(f[1], is(5));
+            assertThat(f[2], is(5));
         }
     }
 }
